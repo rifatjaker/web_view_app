@@ -1,0 +1,4 @@
+#Wed Dec 17 14:02:54 GMT+06:00 2025
+base.0=E\:\\My Projects\\web_view_app\\mq\\app\\build\\intermediates\\dex\\release\\mergeDexRelease\\classes.dex
+path.0=classes.dex
+renamed.0=classes.dex

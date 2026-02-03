@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.MQWebViewApp" parent="Theme.AppCompat.Light.NoActionBar">
+        <item name="colorPrimary">#242D64</item>
+        <item name="colorPrimaryDark">#1a2145</item>
+        <item name="colorAccent">#242D64</item>
+    </style>
+</resources>
+

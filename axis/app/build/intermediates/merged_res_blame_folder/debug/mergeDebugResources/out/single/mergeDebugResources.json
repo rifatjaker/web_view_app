@@ -1,0 +1,34 @@
+[
+    {
+        "merged": "C:\\Users\\User\\.gradle\\daemon\\8.13\\com.shakib.sir.shakib.app-debug-31:\\drawable_shakib_sir.jpg.flat",
+        "source": "C:\\Users\\User\\.gradle\\daemon\\8.13\\com.shakib.sir.shakib.app-main-33:\\drawable\\shakib_sir.jpg"
+    },
+    {
+        "merged": "C:\\Users\\User\\.gradle\\daemon\\8.13\\com.shakib.sir.shakib.app-debug-31:\\drawable_ic_launcher_foreground.xml.flat",
+        "source": "C:\\Users\\User\\.gradle\\daemon\\8.13\\com.shakib.sir.shakib.app-main-33:\\drawable\\ic_launcher_foreground.xml"
+    },
+    {
+        "merged": "C:\\Users\\User\\.gradle\\daemon\\8.13\\com.shakib.sir.shakib.app-debug-31:\\mipmap-anydpi-v26_ic_launcher_round.xml.flat",
+        "source": "C:\\Users\\User\\.gradle\\daemon\\8.13\\com.shakib.sir.shakib.app-main-33:\\mipmap-anydpi-v26\\ic_launcher_round.xml"
+    },
+    {
+        "merged": "C:\\Users\\User\\.gradle\\daemon\\8.13\\com.shakib.sir.shakib.app-debug-31:\\drawable_axis_logo.png.flat",
+        "source": "C:\\Users\\User\\.gradle\\daemon\\8.13\\com.shakib.sir.shakib.app-main-33:\\drawable\\axis_logo.png"
+    },
+    {
+        "merged": "C:\\Users\\User\\.gradle\\daemon\\8.13\\com.shakib.sir.shakib.app-debug-31:\\mipmap-anydpi-v26_ic_launcher.xml.flat",
+        "source": "C:\\Users\\User\\.gradle\\daemon\\8.13\\com.shakib.sir.shakib.app-main-33:\\mipmap-anydpi-v26\\ic_launcher.xml"
+    },
+    {
+        "merged": "com.shakib.sir.shakib.app-debug-31:/drawable_axis_logo.jpg.flat",
+        "source": "com.shakib.sir.shakib.app-main-33:/drawable/axis_logo.jpg"
+    },
+    {
+        "merged": "C:\\Users\\User\\.gradle\\daemon\\8.13\\com.shakib.sir.shakib.app-debug-31:\\drawable_circle_background.xml.flat",
+        "source": "C:\\Users\\User\\.gradle\\daemon\\8.13\\com.shakib.sir.shakib.app-main-33:\\drawable\\circle_background.xml"
+    },
+    {
+        "merged": "C:\\Users\\User\\.gradle\\daemon\\8.13\\com.shakib.sir.shakib.app-debug-31:\\layout_activity_main.xml.flat",
+        "source": "C:\\Users\\User\\.gradle\\daemon\\8.13\\com.shakib.sir.shakib.app-main-33:\\layout\\activity_main.xml"
+    }
+]

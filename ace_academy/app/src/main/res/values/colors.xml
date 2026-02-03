@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Primary Brand Colors -->
+    <color name="colorPrimary">#1565C0</color>
+    <color name="colorPrimaryDark">#0D47A1</color>
+    <color name="colorAccent">#FF6F00</color>
+    
+    <!-- Background Colors -->
+    <color name="backgroundColor">#F5F5F5</color>
+    <color name="ic_launcher_background">#1565C0</color>
+    
+    <!-- Text Colors -->
+    <color name="subtitleColor">#E3F2FD</color>
+    <color name="copyrightColor">#B3E5FC</color>
+    
+    <!-- Progress Colors -->
+    <color name="progressBackground">#E0E0E0</color>
+    
+    <!-- Gradient Colors -->
+    <color name="gradientStart">#1565C0</color>
+    <color name="gradientMiddle">#1976D2</color>
+    <color name="gradientEnd">#2196F3</color>
+    
+    <!-- Footer Gradient Colors -->
+    <color name="footerGradientStart">#0D47A1</color>
+    <color name="footerGradientEnd">#1565C0</color>
+</resources>

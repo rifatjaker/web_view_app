@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Ace Academy</string>
+    <string name="nav_title">Ace Academy</string>
+    <string name="nav_subtitle">Student Portal</string>
+    <string name="loading">Loading...</string>
+    <string name="error_loading">Error loading page</string>
+    <string name="retry">RETRY</string>
+    <string name="copyright">© 2026 Ace Academy - Arif Sir. All rights reserved.</string>
+</resources>

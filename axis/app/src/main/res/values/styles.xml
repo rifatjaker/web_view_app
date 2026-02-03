@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.WebViewApp" parent="Theme.AppCompat.Light.NoActionBar">
+        <item name="colorPrimary">#233962</item>
+        <item name="colorPrimaryDark">#1a2d4a</item>
+        <item name="colorAccent">#233962</item>
+    </style>
+</resources>
+
