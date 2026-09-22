@@ -1,0 +1,23 @@
+# .htaccess file for .well-known directory
+# Place this in your website's .well-known directory
+
+# Allow access to assetlinks.json
+<Files "assetlinks.json">
+    # Set correct content type
+    Header set Content-Type "application/json"
+    
+    # Allow cross-origin requests (optional but recommended)
+    Header set Access-Control-Allow-Origin "*"
+    
+    # Ensure the file is readable
+    Allow from all
+    Require all granted
+</Files>
+
+# Prevent directory listing
+Options -Indexes
+
+# Enable HTTPS redirection if not already done at server level
+# RewriteEngine On
+# RewriteCond %{HTTPS} off
+# RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]

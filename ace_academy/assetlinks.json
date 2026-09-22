@@ -1,0 +1,15 @@
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls",
+      "delegate_permission/common.get_login_creds"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.arif.sir.ace_academy",
+      "sha256_cert_fingerprints": [
+        "74:B2:F5:34:C5:A4:53:98:5A:B1:C7:83:DB:D2:0C:33:37:AF:13:6B:4E:B9:4F:D9:17:D3:F9:33:74:4F:65:CF"
+      ]
+    }
+  }
+]

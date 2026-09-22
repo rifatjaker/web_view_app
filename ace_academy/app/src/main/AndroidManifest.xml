@@ -24,7 +24,7 @@
             </intent-filter>
             
             <!-- Deep linking support for portal URLs -->
-            <intent-filter android:autoVerify="false">
+            <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />

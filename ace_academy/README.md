@@ -12,7 +12,7 @@ A professional WebView application for Ace Academy's student portal, featuring e
 - 🕐 Real-time clock display in footer
 - 📊 Progress bar for page loading
 - 🔄 Smooth page transitions with animations
-- 📲 Deep linking support for portal URLs
+- 📲 Deep linking support for portal URLs (Android 12+ verified)
 - 🎯 Material Design components
 - 🖼️ Custom navigation bar with logo and teacher photo
 - ⚡ Optimized for Android 15 (API 35)
@@ -60,6 +60,18 @@ A professional WebView application for Ace Academy's student portal, featuring e
    ```bash
    ./gradlew bundleRelease
    ```
+
+5. **Setup Deep Links** (Required for Android 12+ and Google Play):
+   ```powershell
+   # Get SHA-256 fingerprint
+   .\get_sha256_fingerprint.ps1
+   ```
+   Then follow the detailed instructions in [DEEP_LINKS_SETUP.md](DEEP_LINKS_SETUP.md)
+   
+   **Quick Summary:**
+   - Update `assetlinks.json` with your SHA-256 fingerprints
+   - Upload it to `https://aceacademybd.com/.well-known/assetlinks.json`
+   - This enables direct app opening from web URLs on Android 12+
 
 ### Installing on Device
 
