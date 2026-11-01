@@ -33,7 +33,7 @@ function panel_nav(string $active): void
     ];
 
     echo '<nav class="navbar navbar-expand-lg navbar-dark bg-primary mb-4">';
-    echo '<div class="container">';
+    echo '<div class="container-fluid">';
     echo '<a class="navbar-brand d-flex align-items-center gap-2" href="dashboard.php">';
     echo '<img class="brand-logo" src="https://a2technologiesbd.com/favicon.png" alt="A2 Technologies" width="32" height="32">';
     echo 'Bulk SMS</a>';
@@ -69,7 +69,9 @@ function page_open(string $title, string $active): void
         .logout-form { margin: 0; }
         .logout-form .nav-link { width: 100%; background: transparent; border: 0; color: rgba(255,255,255,.85); }
         .logout-form .nav-link:hover { color: #fff; }
-        .page-wrap { max-width: 1100px; }
+        .message-hover { cursor: help; border-bottom: 1px dotted #90a4ae; }
+        .sms-popover { max-width: 420px; }
+        .sms-popover .popover-body { white-space: pre-wrap; max-height: 240px; overflow: auto; }
         textarea { min-height: 140px; }
         .stat-box, .meter { background: #fff; border: 1px solid #e6eaee; border-radius: .75rem; padding: 1rem 1.1rem; height: 100%; }
         .meter { display: flex; align-items: center; gap: .85rem; }
@@ -91,14 +93,16 @@ function page_open(string $title, string $active): void
         code { font-size: .85rem; }
     </style></head><body>';
     panel_nav($active);
-    echo '<div class="container page-wrap pb-5">';
+    echo '<div class="container-fluid pb-5">';
     echo '<h1 class="h3 mb-3">' . h($title) . '</h1>';
 }
 
-function page_close(): void
+function page_close(string $script = ''): void
 {
     echo '</div>';
     echo '<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>';
+    echo $script;
+    echo '<script>document.querySelectorAll("[data-bs-toggle=popover]").forEach(function (el) { bootstrap.Popover.getOrCreateInstance(el, {container: "body"}); });</script>';
     echo '</body></html>';
 }
 

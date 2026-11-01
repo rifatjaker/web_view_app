@@ -57,11 +57,14 @@ class ApiClient(serverUrl: String, private val apiKey: String) {
         post("/api/register_device.php", body)
     }
 
-    fun updateStatus(clientName: String, id: Int, status: String) {
+    fun updateStatus(clientName: String, id: Int, status: String, sender: String = "") {
         val body = JSONObject()
             .put("client_name", clientName)
             .put("id", id)
             .put("status", status)
+        if (sender.isNotBlank()) {
+            body.put("sender", sender)
+        }
         post("/api/update_status.php", body)
     }
 

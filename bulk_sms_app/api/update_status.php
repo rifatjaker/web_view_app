@@ -10,6 +10,10 @@ $data = api_require_body();
 $clientName = api_client_name($data);
 $id = (int) ($data['id'] ?? 0);
 $status = (string) ($data['status'] ?? '');
+$sender = preg_replace('/[^\d+]/', '', (string) ($data['sender'] ?? '')) ?? '';
+if (preg_match('/^\+?\d{8,20}$/', $sender) !== 1) {
+    $sender = '';
+}
 
 if ($id < 1) {
     api_fail(422, 'id is required.');
@@ -38,10 +42,13 @@ try {
 
     $update = $pdo->prepare(
         "UPDATE sms_queue
-         SET status = ?, claimed_at = NULL
+         SET status = ?,
+             claimed_at = NULL,
+             delivered_at = CASE WHEN ? = 'sent' THEN NOW() ELSE delivered_at END,
+             sender = CASE WHEN ? <> '' THEN ? ELSE sender END
          WHERE id = ? AND client_name = ? AND status IN ('pending', 'sending')"
     );
-    $update->execute([$status, $id, $clientName]);
+    $update->execute([$status, $status, $sender, $sender, $id, $clientName]);
 } catch (Throwable $e) {
     api_fail(500, 'Could not update SMS status.');
 }

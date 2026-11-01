@@ -23,6 +23,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 class GatewayService : Service() {
     private val worker = Thread(::loop, "sms-gateway")
     private val started = AtomicBoolean(false)
+    private var lastWaitingStatuses = -1
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -127,10 +128,11 @@ class GatewayService : Service() {
                     false
                 }
                 val status = if (ok) "sent" else "failed"
-                prefs.enqueueStatus(sms.clientName, sms.id, status)
+                val sender = simNumber(route.subscriptionId)
+                prefs.enqueueStatus(sms.clientName, sms.id, status, sender)
                 GatewayLog.add("$simName ${status.replaceFirstChar { it.uppercase() }} #${sms.id} ${sms.clientName} to ${sms.receiver} (${sms.segments})")
                 try {
-                    api.updateStatus(sms.clientName, sms.id, status)
+                    api.updateStatus(sms.clientName, sms.id, status, sender)
                     prefs.removeStatus(sms.clientName, sms.id)
                 } catch (error: ApiException) {
                     if (error.httpCode == 404) {
@@ -180,6 +182,26 @@ class GatewayService : Service() {
         return if (info == null) "SIM" else "SIM ${info.simSlotIndex + 1}"
     }
 
+    private fun simNumber(subscriptionId: Int): String {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_PHONE_NUMBERS) != PackageManager.PERMISSION_GRANTED) {
+            return ""
+        }
+        val manager = getSystemService(SubscriptionManager::class.java) ?: return ""
+        val raw = try {
+            if (Build.VERSION.SDK_INT >= 33) {
+                manager.getPhoneNumber(subscriptionId)
+            } else {
+                @Suppress("DEPRECATION")
+                manager.activeSubscriptionInfoList
+                    ?.firstOrNull { it.subscriptionId == subscriptionId }
+                    ?.number
+            }
+        } catch (_: SecurityException) {
+            ""
+        }
+        return raw?.filter { it.isDigit() || it == '+' }?.take(20).orEmpty()
+    }
+
     private fun routeLabel(routes: List<SimRoute>): String {
         if (routes.isEmpty()) {
             return "gateway"
@@ -191,17 +213,25 @@ class GatewayService : Service() {
     }
 
     private fun flushStatuses(api: ApiClient, prefs: GatewayPrefs) {
+        var waiting = 0
         for (item in prefs.pendingStatuses()) {
             try {
-                api.updateStatus(item.clientName, item.id, item.status)
+                api.updateStatus(item.clientName, item.id, item.status, item.sender)
                 prefs.removeStatus(item.clientName, item.id)
             } catch (error: ApiException) {
                 if (error.httpCode == 404) {
                     prefs.removeStatus(item.clientName, item.id)
                 } else {
-                    GatewayLog.add("Retry status #${item.id} later")
+                    waiting++
                 }
             }
+        }
+        if (waiting == lastWaitingStatuses) {
+            return
+        }
+        lastWaitingStatuses = waiting
+        if (waiting > 0) {
+            GatewayLog.add("$waiting status updates waiting to sync")
         }
     }
 

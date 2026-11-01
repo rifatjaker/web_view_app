@@ -16,6 +16,8 @@ CREATE TABLE IF NOT EXISTS `sms_queue` (
     `status` ENUM('pending', 'sending', 'sent', 'failed') NOT NULL DEFAULT 'pending',
     `claimed_at` DATETIME NULL DEFAULT NULL,
     `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `delivered_at` DATETIME NULL DEFAULT NULL,
+    `sender` VARCHAR(20) NULL DEFAULT NULL,
     PRIMARY KEY (`id`),
     KEY `idx_sms_queue_status` (`status`, `id`),
     KEY `idx_sms_queue_client` (`client_name`)
@@ -40,6 +42,38 @@ PREPARE claimed_stmt FROM @claimed_sql;
 EXECUTE claimed_stmt;
 DEALLOCATE PREPARE claimed_stmt;
 
+SET @delivered_exists := (
+    SELECT COUNT(*)
+    FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE()
+      AND TABLE_NAME = 'sms_queue'
+      AND COLUMN_NAME = 'delivered_at'
+);
+SET @delivered_sql := IF(
+    @delivered_exists = 0,
+    'ALTER TABLE `sms_queue` ADD COLUMN `delivered_at` DATETIME NULL DEFAULT NULL AFTER `created_at`',
+    'SELECT 1'
+);
+PREPARE delivered_stmt FROM @delivered_sql;
+EXECUTE delivered_stmt;
+DEALLOCATE PREPARE delivered_stmt;
+
+SET @sender_exists := (
+    SELECT COUNT(*)
+    FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE()
+      AND TABLE_NAME = 'sms_queue'
+      AND COLUMN_NAME = 'sender'
+);
+SET @sender_sql := IF(
+    @sender_exists = 0,
+    'ALTER TABLE `sms_queue` ADD COLUMN `sender` VARCHAR(20) NULL DEFAULT NULL AFTER `receiver`',
+    'SELECT 1'
+);
+PREPARE sender_stmt FROM @sender_sql;
+EXECUTE sender_stmt;
+DEALLOCATE PREPARE sender_stmt;
+
 CREATE TABLE IF NOT EXISTS `client_list` (
     `id` INT NOT NULL AUTO_INCREMENT,
     `client_name` VARCHAR(100) NOT NULL,
@@ -47,16 +81,6 @@ CREATE TABLE IF NOT EXISTS `client_list` (
     PRIMARY KEY (`id`),
     UNIQUE KEY `uq_client_list_name` (`client_name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-INSERT INTO `client_list` (`client_name`) VALUES
-    ('AKB_Chemistry'),
-    ('Akhtar_Feni'),
-    ('Bonik_Vhandar'),
-    ('axis_education'),
-    ('mdshahedsir'),
-    ('waliulsir'),
-    ('wowjezz')
-ON DUPLICATE KEY UPDATE `client_name` = `client_name`;
 
 CREATE TABLE IF NOT EXISTS `client_balance` (
     `id` INT NOT NULL AUTO_INCREMENT,

@@ -70,6 +70,8 @@ function sms_queue_ensure_table(PDO $pdo): void
             `status` ENUM('pending', 'sending', 'sent', 'failed') NOT NULL DEFAULT 'pending',
             `claimed_at` DATETIME NULL DEFAULT NULL,
             `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            `delivered_at` DATETIME NULL DEFAULT NULL,
+            `sender` VARCHAR(20) NULL DEFAULT NULL,
             PRIMARY KEY (`id`),
             KEY `idx_sms_queue_status` (`status`, `id`),
             KEY `idx_sms_queue_client` (`client_name`)
@@ -95,6 +97,16 @@ function sms_queue_ensure_table(PDO $pdo): void
             'ALTER TABLE sms_queue ADD COLUMN claimed_at DATETIME NULL DEFAULT NULL AFTER status'
         );
     }
+    if (!isset($existing['delivered_at'])) {
+        $pdo->exec(
+            'ALTER TABLE sms_queue ADD COLUMN delivered_at DATETIME NULL DEFAULT NULL AFTER created_at'
+        );
+    }
+    if (!isset($existing['sender'])) {
+        $pdo->exec(
+            'ALTER TABLE sms_queue ADD COLUMN sender VARCHAR(20) NULL DEFAULT NULL AFTER receiver'
+        );
+    }
 
     $pdo->exec(
         "ALTER TABLE sms_queue
@@ -110,21 +122,6 @@ function sms_queue_ensure_table(PDO $pdo): void
             UNIQUE KEY `uq_client_list_name` (`client_name`)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
     );
-
-    $seed = $pdo->prepare(
-        'INSERT INTO client_list (client_name) VALUES (?) ON DUPLICATE KEY UPDATE client_name = client_name'
-    );
-    foreach ([
-        'AKB_Chemistry',
-        'Akhtar_Feni',
-        'Bonik_Vhandar',
-        'axis_education',
-        'mdshahedsir',
-        'waliulsir',
-        'wowjezz',
-    ] as $clientName) {
-        $seed->execute([$clientName]);
-    }
 
     $pdo->exec(
         "CREATE TABLE IF NOT EXISTS `client_balance` (

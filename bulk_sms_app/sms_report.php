@@ -72,7 +72,7 @@ try {
         $listParams[] = $status;
     }
     $list = db()->prepare(
-        "SELECT id, client_name, receiver, message, segments, sms_cost, status, created_at
+        "SELECT id, client_name, sender, receiver, message, segments, sms_cost, status, created_at, delivered_at
          FROM sms_queue
          WHERE $listWhere
          ORDER BY id DESC
@@ -153,52 +153,93 @@ page_open('SMS Report', 'report');
     </div>
 </div>
 
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.8/css/dataTables.bootstrap5.min.css">
 <div class="card shadow-sm">
     <div class="card-body">
         <h2 class="h5">Messages <span class="text-secondary fs-6"><?= (int) $summary['total'] ?> in range<?= $status !== '' ? ', filtered list below' : '' ?></span></h2>
-        <div class="table-responsive">
-            <table class="table table-sm table-bordered align-middle mb-0">
+            <table id="sms_report_table" class="table table-sm table-bordered align-middle mb-0 w-100">
                 <thead>
                     <tr>
                         <th>ID</th>
                         <th>Client</th>
+                        <th>Sender</th>
                         <th>Receiver</th>
                         <th>Message</th>
                         <th>Segments</th>
                         <th>Cost</th>
                         <th>Status</th>
                         <th>Created</th>
+                        <th>Delivered</th>
                     </tr>
                 </thead>
                 <tbody>
-                    <?php if ($rows === []): ?>
-                        <tr><td colspan="8" class="text-secondary">এই ফিল্টারে কোনো SMS নেই।</td></tr>
-                    <?php else: ?>
-                        <?php foreach ($rows as $row): ?>
+                    <?php foreach ($rows as $row): ?>
                             <tr>
                                 <td><?= (int) $row['id'] ?></td>
                                 <td><?= h((string) $row['client_name']) ?></td>
+                                <td><?= h((string) ($row['sender'] ?? '')) ?></td>
                                 <td><?= h((string) $row['receiver']) ?></td>
-                                <td><?= h(excerpt((string) $row['message'])) ?></td>
+                                <td><span class="d-none"><?= h((string) $row['message']) ?></span><span class="message-hover" tabindex="0" role="button" data-bs-toggle="popover" data-bs-trigger="hover focus" data-bs-placement="auto" data-bs-custom-class="sms-popover" data-bs-content="<?= h((string) $row['message']) ?>"><?= h(excerpt((string) $row['message'])) ?></span></td>
                                 <td><?= (int) $row['segments'] ?></td>
                                 <td><?= h(money($row['sms_cost'])) ?></td>
                                 <td><?= h((string) $row['status']) ?></td>
                                 <td><?= h((string) $row['created_at']) ?></td>
+                                <td><?= h((string) ($row['delivered_at'] ?? '')) ?></td>
                             </tr>
-                        <?php endforeach; ?>
-                    <?php endif; ?>
+                    <?php endforeach; ?>
                 </tbody>
                 <tfoot>
                     <tr>
-                        <th colspan="4" class="text-end">Total</th>
+                        <th></th>
+                        <th></th>
+                        <th></th>
+                        <th></th>
+                        <th class="text-end">Total</th>
                         <th><?= (int) $totalSegments ?></th>
                         <th><?= h(money($totalCost)) ?></th>
-                        <th colspan="2"></th>
+                        <th></th>
+                        <th></th>
+                        <th></th>
                     </tr>
                 </tfoot>
             </table>
-        </div>
     </div>
 </div>
 <?php
-page_close();
+page_close(<<<'HTML'
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.8/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.8/js/dataTables.bootstrap5.min.js"></script>
+<script>
+const reportTable = document.getElementById("sms_report_table");
+if (reportTable) {
+    const api = $("#sms_report_table").DataTable({
+        pageLength: 25,
+        lengthMenu: [10, 25, 50, 100],
+        order: [[0, "desc"]],
+        autoWidth: false,
+        scrollX: true,
+        language: {
+            emptyTable: "এই ফিল্টারে কোনো SMS নেই।",
+            zeroRecords: "এই সার্চে কোনো SMS নেই।",
+            search: "Search",
+            lengthMenu: "Show _MENU_",
+            info: "Showing _START_ to _END_ of _TOTAL_",
+            infoEmpty: "Showing 0 to 0 of 0",
+            paginate: { previous: "Prev", next: "Next" }
+        }
+    });
+    const bindPopovers = function () {
+        document.querySelectorAll("[data-bs-toggle=popover]").forEach(function (el) {
+            const existing = bootstrap.Popover.getInstance(el);
+            if (existing) {
+                existing.dispose();
+            }
+            new bootstrap.Popover(el, { container: "body", placement: "bottom" });
+        });
+    };
+    api.on("draw", bindPopovers);
+    bindPopovers();
+}
+</script>
+HTML);
