@@ -148,6 +148,10 @@ public class MainActivity extends AppCompatActivity {
         webView.setDownloadListener(new DownloadListener() {
             @Override
             public void onDownloadStart(String url, String userAgent, String contentDisposition, String mimeType, long contentLength) {
+                if (isPdfUrl(url) || "application/pdf".equalsIgnoreCase(mimeType)) {
+                    openPdfInViewer(url);
+                    return;
+                }
                 new DownloadBridge(MainActivity.this, webView).downloadFile(url, userAgent);
             }
         });
@@ -234,11 +238,9 @@ public class MainActivity extends AppCompatActivity {
             }
             
             private boolean handleUrlLoading(WebView view, String url) {
-                // Check if URL is a PDF file
-                if (url != null && (url.toLowerCase().endsWith(".pdf") || url.toLowerCase().contains(".pdf?"))) {
-                    // Use Google Docs Viewer to display PDF within WebView
-                    String googleDocsUrl = "https://docs.google.com/viewer?url=" + android.net.Uri.encode(url, "UTF-8") + "&embedded=true";
-                    view.loadUrl(googleDocsUrl);
+                // Open PDFs in a separate activity so Back always returns to the portal
+                if (isPdfUrl(url)) {
+                    openPdfInViewer(url);
                     return true;
                 }
                 // For non-PDF URLs, load normally
@@ -332,6 +334,25 @@ public class MainActivity extends AppCompatActivity {
         SimpleDateFormat dateFormat = new SimpleDateFormat("EEEE, MMMM dd, yyyy  |  hh:mm:ss a", Locale.getDefault());
         String currentDateTime = dateFormat.format(new Date());
         footerDateTime.setText(currentDateTime);
+    }
+
+    private boolean isPdfUrl(String url) {
+        if (url == null) {
+            return false;
+        }
+        String cleanUrl = url.toLowerCase(Locale.US).split("[?#]", 2)[0];
+        return cleanUrl.endsWith(".pdf");
+    }
+
+    private void openPdfInViewer(String pdfUrl) {
+        Intent intent = new Intent(this, PdfViewerActivity.class);
+        intent.putExtra(PdfViewerActivity.EXTRA_PDF_URL, pdfUrl);
+        String cookies = CookieManager.getInstance().getCookie(pdfUrl);
+        if (cookies != null) {
+            intent.putExtra(PdfViewerActivity.EXTRA_COOKIES, cookies);
+        }
+        intent.putExtra(PdfViewerActivity.EXTRA_USER_AGENT, webView.getSettings().getUserAgentString());
+        startActivity(intent);
     }
 
     private void showErrorMessage(String message) {
