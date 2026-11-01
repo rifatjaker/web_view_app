@@ -34,6 +34,11 @@
                     android:pathPrefix="/student_portal" />
             </intent-filter>
         </activity>
+
+        <activity
+            android:name=".PdfViewerActivity"
+            android:exported="false"
+            android:configChanges="orientation|screenSize|keyboardHidden" />
     </application>
 
 </manifest>
