@@ -33,6 +33,14 @@ try {
         api_fail(404, 'SMS was not found for this client.');
     }
     if ($current === 'sent' || $current === 'failed') {
+        if ($sender !== '') {
+            $fill = $pdo->prepare(
+                "UPDATE sms_queue
+                 SET sender = ?
+                 WHERE id = ? AND client_name = ? AND (sender IS NULL OR sender = '')"
+            );
+            $fill->execute([$sender, $id, $clientName]);
+        }
         api_ok([
             'id' => $id,
             'client_name' => $clientName,

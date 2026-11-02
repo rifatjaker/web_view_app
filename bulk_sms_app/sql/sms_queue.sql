@@ -77,10 +77,27 @@ DEALLOCATE PREPARE sender_stmt;
 CREATE TABLE IF NOT EXISTS `client_list` (
     `id` INT NOT NULL AUTO_INCREMENT,
     `client_name` VARCHAR(100) NOT NULL,
+    `sim_number` VARCHAR(20) NULL DEFAULT NULL,
     `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (`id`),
     UNIQUE KEY `uq_client_list_name` (`client_name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+SET @sim_exists := (
+    SELECT COUNT(*)
+    FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE()
+      AND TABLE_NAME = 'client_list'
+      AND COLUMN_NAME = 'sim_number'
+);
+SET @sim_sql := IF(
+    @sim_exists = 0,
+    'ALTER TABLE `client_list` ADD COLUMN `sim_number` VARCHAR(20) NULL DEFAULT NULL AFTER `client_name`',
+    'SELECT 1'
+);
+PREPARE sim_stmt FROM @sim_sql;
+EXECUTE sim_stmt;
+DEALLOCATE PREPARE sim_stmt;
 
 CREATE TABLE IF NOT EXISTS `client_balance` (
     `id` INT NOT NULL AUTO_INCREMENT,

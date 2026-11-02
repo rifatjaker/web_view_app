@@ -56,7 +56,7 @@ class MainActivity : AppCompatActivity() {
         }
         binding.logText.text = GatewayLog.text()
         binding.statusText.text = if (GatewayService.isRunning()) {
-            "Running · ${prefs.intervalMinutes} min · " + runningSummary().ifBlank { "no client" }
+            "Running · ${prefs.intervalLabel()} · " + runningSummary().ifBlank { "no client" }
         } else {
             "Stopped"
         }
@@ -70,16 +70,18 @@ class MainActivity : AppCompatActivity() {
 
         binding.serverUrl.setText(prefs.serverUrl.ifBlank { GatewayPrefs.DEFAULT_URL })
         binding.apiKey.setText(prefs.apiKey.ifBlank { GatewayPrefs.DEFAULT_API_KEY })
-        val intervals = listOf("1 min", "2 min", "3 min", "4 min", "5 min")
+        val intervalSeconds = listOf(10, 15, 30, 60, 120)
+        val intervals = listOf("10 sec", "15 sec", "30 sec", "1 min", "2 min")
         binding.intervalSpinner.adapter = ArrayAdapter(
             this,
             android.R.layout.simple_spinner_dropdown_item,
             intervals
         )
-        binding.intervalSpinner.setSelection(prefs.intervalMinutes - 1)
+        val savedInterval = intervalSeconds.indexOf(prefs.intervalSeconds).let { if (it < 0) 0 else it }
+        binding.intervalSpinner.setSelection(savedInterval)
         binding.intervalSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(parent: AdapterView<*>?, view: android.view.View?, position: Int, id: Long) {
-                prefs.intervalMinutes = position + 1
+                prefs.intervalSeconds = intervalSeconds[position]
                 showLog()
             }
 
@@ -160,7 +162,8 @@ class MainActivity : AppCompatActivity() {
         prefs.running = true
         GatewayService.start(this, pollNow)
         PushBridge.sync(this)
-        GatewayLog.add("Started. Interval ${prefs.intervalMinutes} min. " + runningSummary())
+        SimAssign.sync(this)
+        GatewayLog.add("Started. Interval ${prefs.intervalLabel()}. " + runningSummary())
         showLog()
     }
 
@@ -209,13 +212,33 @@ class MainActivity : AppCompatActivity() {
     private fun loadClients() {
         val url = binding.serverUrl.text?.toString().orEmpty()
         val key = binding.apiKey.text?.toString().orEmpty()
+        val simIds = ArrayList(sims)
         binding.loadClientsButton.isEnabled = false
         Thread {
             try {
-                val names = ApiClient(url, key).clientList()
+                val rows = ApiClient(url, key).clientList()
+                val bySim = HashMap<Int, List<String>>()
+                for (subscriptionId in simIds) {
+                    val number = SimNumbers.number(this, subscriptionId)
+                    if (number.isBlank()) {
+                        continue
+                    }
+                    bySim[subscriptionId] = rows
+                        .filter { SimNumbers.same(it.simNumber, number) }
+                        .map { it.name }
+                }
                 runOnUiThread {
-                    renderClients(names)
-                    GatewayLog.add("Loaded ${names.size} clients")
+                    for ((subscriptionId, names) in bySim) {
+                        prefs.setClientsForSim(subscriptionId, names)
+                    }
+                    renderClients(rows.map { it.name })
+                    val current = prefs.clientsForSim(currentSimId())
+                    val summary = if (bySim.isEmpty()) {
+                        "SIM number missing, kept the ticks already on the phone"
+                    } else {
+                        "This SIM: " + current.joinToString(", ").ifBlank { "none" }
+                    }
+                    GatewayLog.add("Loaded ${rows.size} clients. $summary")
                     showLog()
                 }
             } catch (error: Exception) {

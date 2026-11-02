@@ -4,6 +4,38 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/includes/panel.php';
 
+function sms_delay_seconds(string $created, string $delivered): ?int
+{
+    if ($created === '' || $delivered === '') {
+        return null;
+    }
+    $start = strtotime($created);
+    $end = strtotime($delivered);
+    if ($start === false || $end === false || $end < $start) {
+        return null;
+    }
+
+    return $end - $start;
+}
+
+function sms_delay_label(?int $seconds): string
+{
+    if ($seconds === null) {
+        return '';
+    }
+    $hours = intdiv($seconds, 3600);
+    $minutes = intdiv($seconds % 3600, 60);
+    $remain = $seconds % 60;
+    if ($hours > 0) {
+        return $hours . 'h ' . $minutes . 'm ' . $remain . 's';
+    }
+    if ($minutes > 0) {
+        return $minutes . 'm ' . $remain . 's';
+    }
+
+    return $remain . 's';
+}
+
 $today = date('Y-m-d');
 $dateFrom = (string) ($_GET['date_from'] ?? $today);
 $dateTo = (string) ($_GET['date_to'] ?? $today);
@@ -43,10 +75,10 @@ try {
         $client = '';
     }
 
-    $where = 'created_at >= ? AND created_at < DATE_ADD(?, INTERVAL 1 DAY)';
+    $where = 'sms_queue.created_at >= ? AND sms_queue.created_at < DATE_ADD(?, INTERVAL 1 DAY)';
     $params = [$dateFrom . ' 00:00:00', $dateTo];
     if ($client !== '') {
-        $where .= ' AND client_name = ?';
+        $where .= ' AND sms_queue.client_name = ?';
         $params[] = $client;
     }
 
@@ -68,12 +100,16 @@ try {
     $listWhere = $where;
     $listParams = $params;
     if ($status !== '') {
-        $listWhere .= ' AND status = ?';
+        $listWhere .= ' AND sms_queue.status = ?';
         $listParams[] = $status;
     }
     $list = db()->prepare(
-        "SELECT id, client_name, sender, receiver, message, segments, sms_cost, status, created_at, delivered_at
+        "SELECT sms_queue.id, sms_queue.client_name,
+                COALESCE(NULLIF(sms_queue.sender, ''), client_list.sim_number) AS sender,
+                sms_queue.receiver, sms_queue.message, sms_queue.segments, sms_queue.sms_cost,
+                sms_queue.status, sms_queue.created_at, sms_queue.delivered_at
          FROM sms_queue
+         LEFT JOIN client_list ON client_list.client_name = sms_queue.client_name
          WHERE $listWhere
          ORDER BY id DESC
          LIMIT 300"
@@ -170,10 +206,12 @@ page_open('SMS Report', 'report');
                         <th>Status</th>
                         <th>Created</th>
                         <th>Delivered</th>
+                        <th>Delay</th>
                     </tr>
                 </thead>
                 <tbody>
                     <?php foreach ($rows as $row): ?>
+                            <?php $delaySeconds = sms_delay_seconds((string) $row['created_at'], (string) ($row['delivered_at'] ?? '')); ?>
                             <tr>
                                 <td><?= (int) $row['id'] ?></td>
                                 <td><?= h((string) $row['client_name']) ?></td>
@@ -185,6 +223,7 @@ page_open('SMS Report', 'report');
                                 <td><?= h((string) $row['status']) ?></td>
                                 <td><?= h((string) $row['created_at']) ?></td>
                                 <td><?= h((string) ($row['delivered_at'] ?? '')) ?></td>
+                                <td data-order="<?= $delaySeconds === null ? '' : (int) $delaySeconds ?>"><?= h(sms_delay_label($delaySeconds)) ?></td>
                             </tr>
                     <?php endforeach; ?>
                 </tbody>
@@ -197,6 +236,7 @@ page_open('SMS Report', 'report');
                         <th class="text-end">Total</th>
                         <th><?= (int) $totalSegments ?></th>
                         <th><?= h(money($totalCost)) ?></th>
+                        <th></th>
                         <th></th>
                         <th></th>
                         <th></th>

@@ -6,6 +6,11 @@ import java.net.URL
 
 class ApiException(val httpCode: Int, message: String) : Exception(message)
 
+data class ClientRow(
+    val name: String,
+    val simNumber: String
+)
+
 data class QueuedSms(
     val id: Int,
     val clientName: String,
@@ -17,17 +22,18 @@ data class QueuedSms(
 class ApiClient(serverUrl: String, private val apiKey: String) {
     private val baseUrl = GatewayPrefs.normalizeBase(serverUrl)
 
-    fun clientList(): List<String> {
+    fun clientList(): List<ClientRow> {
         val json = post("/api/client_list.php", JSONObject())
         val data = json.optJSONArray("data") ?: return emptyList()
-        val names = ArrayList<String>(data.length())
+        val rows = ArrayList<ClientRow>(data.length())
         for (index in 0 until data.length()) {
-            val name = data.getJSONObject(index).optString("client_name").trim()
+            val row = data.getJSONObject(index)
+            val name = row.optString("client_name").trim()
             if (name.isNotEmpty()) {
-                names.add(name)
+                rows.add(ClientRow(name, row.optString("sim_number").trim()))
             }
         }
-        return names
+        return rows
     }
 
     fun getPending(clientNames: List<String>): List<QueuedSms> {
@@ -55,6 +61,10 @@ class ApiClient(serverUrl: String, private val apiKey: String) {
             .put("token", token)
             .put("client_names", org.json.JSONArray(clientNames))
         post("/api/register_device.php", body)
+    }
+
+    fun assignSims(assignments: org.json.JSONArray) {
+        post("/api/assign_sim.php", JSONObject().put("assignments", assignments))
     }
 
     fun updateStatus(clientName: String, id: Int, status: String, sender: String = "") {

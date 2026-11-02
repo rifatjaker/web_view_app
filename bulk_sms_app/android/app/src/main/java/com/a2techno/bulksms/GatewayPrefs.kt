@@ -32,11 +32,16 @@ class GatewayPrefs(context: Context) {
             prefs.edit().putBoolean(KEY_RUNNING, value).apply()
         }
 
-    var intervalMinutes: Int
-        get() = prefs.getInt(KEY_INTERVAL, 1).coerceIn(1, 5)
+    var intervalSeconds: Int
+        get() = prefs.getInt(KEY_INTERVAL_SECONDS, 10).coerceIn(10, 120)
         set(value) {
-            prefs.edit().putInt(KEY_INTERVAL, value.coerceIn(1, 5)).apply()
+            prefs.edit().putInt(KEY_INTERVAL_SECONDS, value.coerceIn(10, 120)).apply()
         }
+
+    fun intervalLabel(): String {
+        val seconds = intervalSeconds
+        return if (seconds < 60) "$seconds sec" else "${seconds / 60} min"
+    }
 
     fun clientsForSim(subscriptionId: Int): List<String> {
         val array = clientMap().optJSONArray(subscriptionId.toString()) ?: return emptyList()
@@ -158,7 +163,7 @@ class GatewayPrefs(context: Context) {
         private const val KEY_CLIENTS = "clients_by_sim"
         private const val KEY_SIM = "subscription_id"
         private const val KEY_RUNNING = "running"
-        private const val KEY_INTERVAL = "interval_minutes"
+        private const val KEY_INTERVAL_SECONDS = "interval_seconds"
         private const val KEY_QUEUE = "items"
 
         fun normalizeBase(input: String): String {

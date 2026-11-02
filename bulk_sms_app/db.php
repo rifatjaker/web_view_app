@@ -117,11 +117,22 @@ function sms_queue_ensure_table(PDO $pdo): void
         "CREATE TABLE IF NOT EXISTS `client_list` (
             `id` INT NOT NULL AUTO_INCREMENT,
             `client_name` VARCHAR(100) NOT NULL,
+            `sim_number` VARCHAR(20) NULL DEFAULT NULL,
             `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
             PRIMARY KEY (`id`),
             UNIQUE KEY `uq_client_list_name` (`client_name`)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
     );
+
+    $clientColumns = [];
+    foreach ($pdo->query('SHOW COLUMNS FROM client_list') as $column) {
+        $clientColumns[$column['Field']] = true;
+    }
+    if (!isset($clientColumns['sim_number'])) {
+        $pdo->exec(
+            'ALTER TABLE client_list ADD COLUMN sim_number VARCHAR(20) NULL DEFAULT NULL AFTER client_name'
+        );
+    }
 
     $pdo->exec(
         "CREATE TABLE IF NOT EXISTS `client_balance` (

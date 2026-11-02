@@ -10,7 +10,7 @@ api_require_body();
 
 try {
     $rows = db()->query(
-        'SELECT id, client_name FROM client_list ORDER BY client_name ASC'
+        'SELECT id, client_name, sim_number FROM client_list ORDER BY client_name ASC'
     )->fetchAll();
 } catch (Throwable $e) {
     api_fail(500, 'Could not load clients.');
@@ -21,6 +21,7 @@ foreach ($rows as $row) {
     $data[] = [
         'id' => (int) $row['id'],
         'client_name' => (string) $row['client_name'],
+        'sim_number' => (string) ($row['sim_number'] ?? ''),
     ];
 }
 

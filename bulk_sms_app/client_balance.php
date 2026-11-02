@@ -97,6 +97,7 @@ page_open('Client Balance', 'balance');
                 <thead>
                     <tr>
                         <th>Client</th>
+                        <th>SIM</th>
                         <th class="text-end">Added</th>
                         <th class="text-end">Used</th>
                         <th class="text-end">Balance</th>
@@ -104,11 +105,12 @@ page_open('Client Balance', 'balance');
                 </thead>
                 <tbody>
                     <?php if ($balances === []): ?>
-                        <tr><td colspan="4" class="text-secondary">কোনো ক্লায়েন্ট নেই।</td></tr>
+                        <tr><td colspan="5" class="text-secondary">কোনো ক্লায়েন্ট নেই।</td></tr>
                     <?php else: ?>
                         <?php foreach ($balances as $row): ?>
                             <tr>
                                 <td><?= h((string) $row['client_name']) ?></td>
+                                <td><?= h((string) ($row['sim_number'] ?? '')) ?></td>
                                 <td class="text-end"><?= h(money($row['added'])) ?></td>
                                 <td class="text-end"><?= h(money($row['used'])) ?></td>
                                 <td class="text-end"><?= h(money($row['balance'])) ?></td>

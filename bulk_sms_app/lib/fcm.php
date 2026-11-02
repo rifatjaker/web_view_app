@@ -76,6 +76,8 @@ function fcm_send(PDO $pdo, array $account, string $token): void
             ],
             'android' => [
                 'priority' => 'HIGH',
+                'ttl' => '30s',
+                'direct_boot_ok' => true,
             ],
         ],
     ], JSON_UNESCAPED_SLASHES);

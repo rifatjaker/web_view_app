@@ -116,6 +116,7 @@ function client_names(): array
 function client_balances(): array
 {
     $sql = "SELECT c.client_name,
+                c.sim_number,
                 COALESCE(b.added, 0) AS added,
                 COALESCE(u.used, 0) AS used,
                 COALESCE(b.added, 0) - COALESCE(u.used, 0) AS balance

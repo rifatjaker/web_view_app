@@ -62,7 +62,7 @@ class GatewayService : Service() {
             }
             var waited = 0
             while (running.get() && !pollNow.get()) {
-                val limit = GatewayPrefs(this).intervalMinutes * 60
+                val limit = GatewayPrefs(this).intervalSeconds
                 if (waited >= limit) {
                     break
                 }
@@ -128,9 +128,10 @@ class GatewayService : Service() {
                     false
                 }
                 val status = if (ok) "sent" else "failed"
-                val sender = simNumber(route.subscriptionId)
+                val sender = SimNumbers.number(this, route.subscriptionId)
                 prefs.enqueueStatus(sms.clientName, sms.id, status, sender)
-                GatewayLog.add("$simName ${status.replaceFirstChar { it.uppercase() }} #${sms.id} ${sms.clientName} to ${sms.receiver} (${sms.segments})")
+                val from = if (sender.isBlank()) "sender missing" else "from $sender"
+                GatewayLog.add("$simName ${status.replaceFirstChar { it.uppercase() }} #${sms.id} ${sms.clientName} to ${sms.receiver} $from (${sms.segments})")
                 try {
                     api.updateStatus(sms.clientName, sms.id, status, sender)
                     prefs.removeStatus(sms.clientName, sms.id)
