@@ -108,12 +108,13 @@ page_open('Client Balance', 'balance');
                         <tr><td colspan="5" class="text-secondary">কোনো ক্লায়েন্ট নেই।</td></tr>
                     <?php else: ?>
                         <?php foreach ($balances as $row): ?>
+                            <?php $lowBalance = (float) $row['balance'] < 50; ?>
                             <tr>
                                 <td><?= h((string) $row['client_name']) ?></td>
                                 <td><?= h((string) ($row['sim_number'] ?? '')) ?></td>
                                 <td class="text-end"><?= h(money($row['added'])) ?></td>
                                 <td class="text-end"><?= h(money($row['used'])) ?></td>
-                                <td class="text-end"><?= h(money($row['balance'])) ?></td>
+                                <td class="text-end<?= $lowBalance ? ' text-danger fw-bold' : '' ?>"><?= h(money($row['balance'])) ?></td>
                             </tr>
                         <?php endforeach; ?>
                     <?php endif; ?>

@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS `sms_queue` (
     `segments` INT NOT NULL DEFAULT 1,
     `sms_cost` DECIMAL(10,2) NOT NULL DEFAULT 0.00,
     `status` ENUM('pending', 'sending', 'sent', 'failed') NOT NULL DEFAULT 'pending',
+    `fail_reason` VARCHAR(255) NULL DEFAULT NULL,
     `claimed_at` DATETIME NULL DEFAULT NULL,
     `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     `delivered_at` DATETIME NULL DEFAULT NULL,
@@ -73,6 +74,22 @@ SET @sender_sql := IF(
 PREPARE sender_stmt FROM @sender_sql;
 EXECUTE sender_stmt;
 DEALLOCATE PREPARE sender_stmt;
+
+SET @reason_exists := (
+    SELECT COUNT(*)
+    FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE()
+      AND TABLE_NAME = 'sms_queue'
+      AND COLUMN_NAME = 'fail_reason'
+);
+SET @reason_sql := IF(
+    @reason_exists = 0,
+    'ALTER TABLE `sms_queue` ADD COLUMN `fail_reason` VARCHAR(255) NULL DEFAULT NULL AFTER `status`',
+    'SELECT 1'
+);
+PREPARE reason_stmt FROM @reason_sql;
+EXECUTE reason_stmt;
+DEALLOCATE PREPARE reason_stmt;
 
 CREATE TABLE IF NOT EXISTS `client_list` (
     `id` INT NOT NULL AUTO_INCREMENT,

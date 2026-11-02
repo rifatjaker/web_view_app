@@ -67,13 +67,16 @@ class ApiClient(serverUrl: String, private val apiKey: String) {
         post("/api/assign_sim.php", JSONObject().put("assignments", assignments))
     }
 
-    fun updateStatus(clientName: String, id: Int, status: String, sender: String = "") {
+    fun updateStatus(clientName: String, id: Int, status: String, sender: String = "", reason: String = "") {
         val body = JSONObject()
             .put("client_name", clientName)
             .put("id", id)
             .put("status", status)
         if (sender.isNotBlank()) {
             body.put("sender", sender)
+        }
+        if (reason.isNotBlank()) {
+            body.put("fail_reason", reason.take(255))
         }
         post("/api/update_status.php", body)
     }

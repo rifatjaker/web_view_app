@@ -121,19 +121,21 @@ class GatewayService : Service() {
                 if (!running.get()) {
                     return
                 }
-                val ok = try {
+                val result = try {
                     SmsSender.send(this, route.subscriptionId, sms.receiver, sms.message)
                 } catch (error: Exception) {
                     GatewayLog.add("$simName send error #${sms.id}: ${error.message}")
-                    false
+                    SendResult(false, (error.message ?: "Send error").take(255))
                 }
-                val status = if (ok) "sent" else "failed"
+                val status = if (result.ok) "sent" else "failed"
+                val reason = if (result.ok) "" else result.reason.ifBlank { "Send failed" }
                 val sender = SimNumbers.number(this, route.subscriptionId)
-                prefs.enqueueStatus(sms.clientName, sms.id, status, sender)
+                prefs.enqueueStatus(sms.clientName, sms.id, status, sender, reason)
                 val from = if (sender.isBlank()) "sender missing" else "from $sender"
-                GatewayLog.add("$simName ${status.replaceFirstChar { it.uppercase() }} #${sms.id} ${sms.clientName} to ${sms.receiver} $from (${sms.segments})")
+                val why = if (reason.isBlank()) "" else " — $reason"
+                GatewayLog.add("$simName ${status.replaceFirstChar { it.uppercase() }} #${sms.id} ${sms.clientName} to ${sms.receiver} $from (${sms.segments})$why")
                 try {
-                    api.updateStatus(sms.clientName, sms.id, status, sender)
+                    api.updateStatus(sms.clientName, sms.id, status, sender, reason)
                     prefs.removeStatus(sms.clientName, sms.id)
                 } catch (error: ApiException) {
                     if (error.httpCode == 404) {
@@ -217,7 +219,7 @@ class GatewayService : Service() {
         var waiting = 0
         for (item in prefs.pendingStatuses()) {
             try {
-                api.updateStatus(item.clientName, item.id, item.status, item.sender)
+                api.updateStatus(item.clientName, item.id, item.status, item.sender, item.reason)
                 prefs.removeStatus(item.clientName, item.id)
             } catch (error: ApiException) {
                 if (error.httpCode == 404) {

@@ -88,7 +88,7 @@ class GatewayPrefs(context: Context) {
         }
     }
 
-    fun enqueueStatus(clientName: String, id: Int, status: String, sender: String = "") {
+    fun enqueueStatus(clientName: String, id: Int, status: String, sender: String = "", reason: String = "") {
         val items = readQueue()
         val kept = JSONArray()
         for (index in 0 until items.length()) {
@@ -103,6 +103,7 @@ class GatewayPrefs(context: Context) {
                 .put("id", id)
                 .put("status", status)
                 .put("sender", sender)
+                .put("fail_reason", reason.take(255))
         )
         queuePrefs.edit().putString(KEY_QUEUE, kept.toString()).apply()
     }
@@ -117,7 +118,8 @@ class GatewayPrefs(context: Context) {
                     item.getString("client_name"),
                     item.getInt("id"),
                     item.getString("status"),
-                    item.optString("sender")
+                    item.optString("sender"),
+                    item.optString("fail_reason")
                 )
             )
         }
@@ -183,7 +185,8 @@ data class StatusUpdate(
     val clientName: String,
     val id: Int,
     val status: String,
-    val sender: String = ""
+    val sender: String = "",
+    val reason: String = ""
 )
 
 data class SimRoute(

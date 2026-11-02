@@ -14,6 +14,10 @@ $sender = preg_replace('/[^\d+]/', '', (string) ($data['sender'] ?? '')) ?? '';
 if (preg_match('/^\+?\d{8,20}$/', $sender) !== 1) {
     $sender = '';
 }
+$reason = preg_replace('/\s+/', ' ', trim((string) ($data['fail_reason'] ?? ''))) ?? '';
+if (strlen($reason) > 255) {
+    $reason = substr($reason, 0, 255);
+}
 
 if ($id < 1) {
     api_fail(422, 'id is required.');
@@ -41,6 +45,14 @@ try {
             );
             $fill->execute([$sender, $id, $clientName]);
         }
+        if ($current === 'failed' && $reason !== '') {
+            $fillReason = $pdo->prepare(
+                "UPDATE sms_queue
+                 SET fail_reason = ?
+                 WHERE id = ? AND client_name = ? AND (fail_reason IS NULL OR fail_reason = '')"
+            );
+            $fillReason->execute([$reason, $id, $clientName]);
+        }
         api_ok([
             'id' => $id,
             'client_name' => $clientName,
@@ -53,10 +65,15 @@ try {
          SET status = ?,
              claimed_at = NULL,
              delivered_at = CASE WHEN ? = 'sent' THEN NOW() ELSE delivered_at END,
-             sender = CASE WHEN ? <> '' THEN ? ELSE sender END
+             sender = CASE WHEN ? <> '' THEN ? ELSE sender END,
+             fail_reason = CASE
+                 WHEN ? = 'sent' THEN NULL
+                 WHEN ? <> '' THEN ?
+                 ELSE fail_reason
+             END
          WHERE id = ? AND client_name = ? AND status IN ('pending', 'sending')"
     );
-    $update->execute([$status, $status, $sender, $sender, $id, $clientName]);
+    $update->execute([$status, $status, $sender, $sender, $status, $reason, $reason, $id, $clientName]);
 } catch (Throwable $e) {
     api_fail(500, 'Could not update SMS status.');
 }

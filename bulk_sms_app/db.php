@@ -68,6 +68,7 @@ function sms_queue_ensure_table(PDO $pdo): void
             `segments` INT NOT NULL DEFAULT 1,
             `sms_cost` DECIMAL(10,2) NOT NULL DEFAULT 0.00,
             `status` ENUM('pending', 'sending', 'sent', 'failed') NOT NULL DEFAULT 'pending',
+            `fail_reason` VARCHAR(255) NULL DEFAULT NULL,
             `claimed_at` DATETIME NULL DEFAULT NULL,
             `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
             `delivered_at` DATETIME NULL DEFAULT NULL,
@@ -105,6 +106,11 @@ function sms_queue_ensure_table(PDO $pdo): void
     if (!isset($existing['sender'])) {
         $pdo->exec(
             'ALTER TABLE sms_queue ADD COLUMN sender VARCHAR(20) NULL DEFAULT NULL AFTER receiver'
+        );
+    }
+    if (!isset($existing['fail_reason'])) {
+        $pdo->exec(
+            'ALTER TABLE sms_queue ADD COLUMN fail_reason VARCHAR(255) NULL DEFAULT NULL AFTER status'
         );
     }
 

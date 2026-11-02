@@ -56,6 +56,98 @@ if (!in_array($status, $allowedStatus, true)) {
     $status = '';
 }
 
+function sms_report_date(string $value, string $fallback): string
+{
+    return preg_match('/^\d{4}-\d{2}-\d{2}$/', $value) === 1 ? $value : $fallback;
+}
+
+function sms_retry_failed(string $dateFrom, string $dateTo, string $client, int $id): int
+{
+    $pdo = db();
+    if ($id > 0) {
+        $where = "status = 'failed' AND id = ?";
+        $params = [$id];
+    } else {
+        $where = "status = 'failed' AND created_at >= ? AND created_at < DATE_ADD(?, INTERVAL 1 DAY)";
+        $params = [$dateFrom . ' 00:00:00', $dateTo];
+        if ($client !== '') {
+            $where .= ' AND client_name = ?';
+            $params[] = $client;
+        }
+    }
+
+    $namesStmt = $pdo->prepare("SELECT DISTINCT client_name FROM sms_queue WHERE $where");
+    $namesStmt->execute($params);
+    $names = $namesStmt->fetchAll(PDO::FETCH_COLUMN);
+    if ($names === []) {
+        return 0;
+    }
+
+    $update = $pdo->prepare(
+        "UPDATE sms_queue
+         SET status = 'pending',
+             claimed_at = NULL,
+             delivered_at = NULL,
+             fail_reason = NULL
+         WHERE $where"
+    );
+    $update->execute($params);
+    $count = $update->rowCount();
+    if ($count > 0) {
+        try {
+            require_once __DIR__ . '/lib/fcm.php';
+            fcm_notify_clients($pdo, $names);
+        } catch (Throwable $e) {
+            // The row is already pending. The phone still picks it up on the backup poll.
+        }
+    }
+
+    return $count;
+}
+
+$retryNotice = '';
+if (isset($_GET['retried']) && preg_match('/^\d+$/', (string) $_GET['retried']) === 1) {
+    $retried = (int) $_GET['retried'];
+    $retryNotice = $retried === 1
+        ? '1 failed SMS is pending again.'
+        : $retried . ' failed SMS are pending again.';
+}
+
+if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
+    $postedFrom = sms_report_date((string) ($_POST['date_from'] ?? ''), $dateFrom);
+    $postedTo = sms_report_date((string) ($_POST['date_to'] ?? ''), $dateTo);
+    if ($postedFrom > $postedTo) {
+        [$postedFrom, $postedTo] = [$postedTo, $postedFrom];
+    }
+    $postedClient = trim((string) ($_POST['client_name'] ?? ''));
+    $postedStatus = (string) ($_POST['status'] ?? '');
+    if (!in_array($postedStatus, $allowedStatus, true)) {
+        $postedStatus = '';
+    }
+    $postedId = (int) ($_POST['id'] ?? 0);
+
+    if (!auth_csrf_ok(isset($_POST['csrf']) ? (string) $_POST['csrf'] : null)) {
+        $retryNotice = 'Retry was rejected. Reload the page and try again.';
+    } else {
+        try {
+            if ($postedClient !== '' && !in_array($postedClient, client_names(), true)) {
+                $postedClient = '';
+            }
+            $count = sms_retry_failed($postedFrom, $postedTo, $postedClient, $postedId);
+            header('Location: sms_report.php?' . http_build_query([
+                'date_from' => $postedFrom,
+                'date_to' => $postedTo,
+                'client_name' => $postedClient,
+                'status' => $postedStatus,
+                'retried' => $count,
+            ]));
+            exit;
+        } catch (Throwable $e) {
+            $retryNotice = 'Could not retry the failed SMS.';
+        }
+    }
+}
+
 $dbError = '';
 $clients = [];
 $rows = [];
@@ -107,7 +199,7 @@ try {
         "SELECT sms_queue.id, sms_queue.client_name,
                 COALESCE(NULLIF(sms_queue.sender, ''), client_list.sim_number) AS sender,
                 sms_queue.receiver, sms_queue.message, sms_queue.segments, sms_queue.sms_cost,
-                sms_queue.status, sms_queue.created_at, sms_queue.delivered_at
+                sms_queue.status, sms_queue.fail_reason, sms_queue.created_at, sms_queue.delivered_at
          FROM sms_queue
          LEFT JOIN client_list ON client_list.client_name = sms_queue.client_name
          WHERE $listWhere
@@ -135,6 +227,9 @@ page_open('SMS Report', 'report');
 ?>
 <?php if ($dbError !== ''): ?>
     <div class="alert alert-warning"><?= h($dbError) ?></div>
+<?php endif; ?>
+<?php if ($retryNotice !== ''): ?>
+    <div class="alert alert-info"><?= h($retryNotice) ?></div>
 <?php endif; ?>
 
 <div class="row g-3 mb-4">
@@ -192,7 +287,19 @@ page_open('SMS Report', 'report');
 <link rel="stylesheet" href="https://cdn.datatables.net/1.13.8/css/dataTables.bootstrap5.min.css">
 <div class="card shadow-sm">
     <div class="card-body">
-        <h2 class="h5">Messages <span class="text-secondary fs-6"><?= (int) $summary['total'] ?> in range<?= $status !== '' ? ', filtered list below' : '' ?></span></h2>
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+            <h2 class="h5 mb-0">Messages <span class="text-secondary fs-6"><?= (int) $summary['total'] ?> in range<?= $status !== '' ? ', filtered list below' : '' ?></span></h2>
+            <?php if ($summary['failed'] > 0): ?>
+                <form method="post" action="sms_report.php">
+                    <input type="hidden" name="csrf" value="<?= h(auth_csrf_token()) ?>">
+                    <input type="hidden" name="date_from" value="<?= h($dateFrom) ?>">
+                    <input type="hidden" name="date_to" value="<?= h($dateTo) ?>">
+                    <input type="hidden" name="client_name" value="<?= h($client) ?>">
+                    <input type="hidden" name="status" value="<?= h($status) ?>">
+                    <button type="submit" class="btn btn-outline-danger btn-sm" onclick="return confirm('এই ফিল্টারের সব failed SMS আবার পাঠানো হবে।')">Retry failed (<?= (int) $summary['failed'] ?>)</button>
+                </form>
+            <?php endif; ?>
+        </div>
             <table id="sms_report_table" class="table table-sm table-bordered align-middle mb-0 w-100">
                 <thead>
                     <tr>
@@ -204,9 +311,11 @@ page_open('SMS Report', 'report');
                         <th>Segments</th>
                         <th>Cost</th>
                         <th>Status</th>
+                        <th>Reason</th>
                         <th>Created</th>
                         <th>Delivered</th>
                         <th>Delay</th>
+                        <th>Retry</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -221,9 +330,23 @@ page_open('SMS Report', 'report');
                                 <td><?= (int) $row['segments'] ?></td>
                                 <td><?= h(money($row['sms_cost'])) ?></td>
                                 <td><?= h((string) $row['status']) ?></td>
+                                <td><?= (string) $row['status'] === 'failed' ? h((string) ($row['fail_reason'] ?? '')) : '' ?></td>
                                 <td><?= h((string) $row['created_at']) ?></td>
                                 <td><?= h((string) ($row['delivered_at'] ?? '')) ?></td>
                                 <td data-order="<?= $delaySeconds === null ? '' : (int) $delaySeconds ?>"><?= h(sms_delay_label($delaySeconds)) ?></td>
+                                <td>
+                                    <?php if ((string) $row['status'] === 'failed'): ?>
+                                        <form method="post" action="sms_report.php">
+                                            <input type="hidden" name="csrf" value="<?= h(auth_csrf_token()) ?>">
+                                            <input type="hidden" name="id" value="<?= (int) $row['id'] ?>">
+                                            <input type="hidden" name="date_from" value="<?= h($dateFrom) ?>">
+                                            <input type="hidden" name="date_to" value="<?= h($dateTo) ?>">
+                                            <input type="hidden" name="client_name" value="<?= h($client) ?>">
+                                            <input type="hidden" name="status" value="<?= h($status) ?>">
+                                            <button type="submit" class="btn btn-outline-primary btn-sm" onclick="return confirm('এই SMS আবার পাঠানো হবে।')">Retry</button>
+                                        </form>
+                                    <?php endif; ?>
+                                </td>
                             </tr>
                     <?php endforeach; ?>
                 </tbody>
@@ -236,6 +359,8 @@ page_open('SMS Report', 'report');
                         <th class="text-end">Total</th>
                         <th><?= (int) $totalSegments ?></th>
                         <th><?= h(money($totalCost)) ?></th>
+                        <th></th>
+                        <th></th>
                         <th></th>
                         <th></th>
                         <th></th>
@@ -259,6 +384,7 @@ if (reportTable) {
         order: [[0, "desc"]],
         autoWidth: false,
         scrollX: true,
+        columnDefs: [{ targets: -1, orderable: false, searchable: false }],
         language: {
             emptyTable: "এই ফিল্টারে কোনো SMS নেই।",
             zeroRecords: "এই সার্চে কোনো SMS নেই।",
